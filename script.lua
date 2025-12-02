@@ -348,9 +348,16 @@ local function GetPlayerColor(player)
     -- Verifica se ambos têm times definidos antes de comparar
     local localTeam = LocalPlayer.Team
     local playerTeam = player.Team
-    if localTeam and playerTeam and localTeam ~= nil and playerTeam ~= nil then
-        -- Compara usando o nome do time para garantir que funcione corretamente
-        local isSameTeam = (localTeam == playerTeam) or (localTeam.Name == playerTeam.Name)
+    
+    -- Se ambos têm times definidos, compara
+    if localTeam and playerTeam then
+        local isSameTeam = false
+        -- Compara usando o objeto Team diretamente ou o nome como fallback
+        if localTeam == playerTeam then
+            isSameTeam = true
+        elseif localTeam.Name and playerTeam.Name then
+            isSameTeam = (localTeam.Name == playerTeam.Name)
+        end
         return isSameTeam and Colors.Ally or Colors.Enemy
     else
         -- Se não há times definidos, considera como inimigo (vermelho)
@@ -479,12 +486,23 @@ local function UpdateESP(player)
         return
     end
     
-    if Settings.TeamCheck and player.Team == LocalPlayer.Team and not Settings.ShowTeam then
+    -- Verifica se é do mesmo time
+    local isSameTeam = false
+    if LocalPlayer.Team and player.Team then
+        isSameTeam = (LocalPlayer.Team == player.Team) or (LocalPlayer.Team.Name == player.Team.Name)
+    end
+    
+    if Settings.TeamCheck and isSameTeam and not Settings.ShowTeam then
         for _, obj in pairs(esp.Box) do obj.Visible = false end
         esp.Tracer.Visible = false
         for _, obj in pairs(esp.HealthBar) do obj.Visible = false end
         for _, obj in pairs(esp.Info) do obj.Visible = false end
         esp.Snapline.Visible = false
+        -- Desabilita o highlight também
+        local highlight = Highlights[player]
+        if highlight then
+            highlight.Enabled = false
+        end
         return
     end
     
