@@ -49,7 +49,7 @@ local function GetTeamColor(team)
     elseif team == "attackers" then
         return Color3.new(1, 0, 0) -- Vermelho
     else
-        return Color3.new(1, 1, 1) -- Branco
+        return Color3.new(1, 0, 0) -- Vermelho (time adversário)
     end
 end
 
@@ -306,7 +306,7 @@ local Window = Fluent:CreateWindow({
     Size = UDim2.fromOffset(580, 460),
     Acrylic = false,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
+    MinimizeKey = Enum.KeyCode.RightControl
 })
 
 -- Cria as tabs
