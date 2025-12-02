@@ -134,44 +134,84 @@ local function CreatePlayerESP(player)
         local function UpdateTeamColor()
             if not ESPEnabled then return end
             if not character or not character.Parent then return end
-            if not highlight.Parent or not textLabel.Parent then return end
+            if not highlight or not highlight.Parent then return end
+            if not textLabel or not textLabel.Parent then return end
             
-            local team = GetPlayerTeam(player)
-            local color = GetTeamColor(team, player)
+            -- Obtém o time do jogador e do LocalPlayer
+            local playerTeam = GetPlayerTeam(player)
+            local myTeam = GetPlayerTeam(LocalPlayer)
             
+            -- Determina a cor baseada na comparação
+            local color
+            if not myTeam then
+                -- Se não tem time definido, considera como inimigo
+                color = Color3.new(1, 0, 0) -- Vermelho
+            elseif not playerTeam then
+                -- Se o jogador não tem time, considera como inimigo
+                color = Color3.new(1, 0, 0) -- Vermelho
+            elseif tostring(playerTeam) == tostring(myTeam) then
+                -- Mesmo time = aliado
+                color = Color3.new(0, 1, 0) -- Verde
+            else
+                -- Time diferente = inimigo
+                color = Color3.new(1, 0, 0) -- Vermelho
+            end
+            
+            -- Atualiza as cores
             highlight.OutlineColor = color
             textLabel.TextColor3 = color
             
-            if team then
-                if team == "defenders" then
+            -- Atualiza o texto com o prefixo do time
+            if playerTeam then
+                if playerTeam == "defenders" then
                     textLabel.Text = "[D] " .. player.Name
-                elseif team == "attackers" then
+                elseif playerTeam == "attackers" then
                     textLabel.Text = "[A] " .. player.Name
+                else
+                    textLabel.Text = player.Name
                 end
             else
                 textLabel.Text = player.Name
             end
         end
         
-        -- Atualiza a cor periodicamente
+        -- Atualiza a cor a cada 500ms
+        local updateRunning = true
+        local updateThread = task.spawn(function()
+            while updateRunning and ESPEnabled do
+                if character and character.Parent and highlight.Parent and textLabel.Parent then
+                    UpdateTeamColor()
+                else
+                    updateRunning = false
+                    break
+                end
+                task.wait(0.5) -- Atualiza a cada 500ms
+            end
+        end)
+        
+        -- Monitora quando o character é removido
         local connection
         connection = RunService.Heartbeat:Connect(function()
             if not character or not character.Parent then
+                updateRunning = false
                 if connection then connection:Disconnect() end
-        return
-    end
-            if highlight.Parent and textLabel.Parent then
-                UpdateTeamColor()
-            else
-                if connection then connection:Disconnect() end
+                return
             end
         end)
         
         table.insert(ESPConnections, connection)
         
+        -- Armazena o thread para limpeza
+        table.insert(ESPConnections, {
+            Disconnect = function()
+                updateRunning = false
+            end
+        })
+        
         -- Limpa quando o character é removido
         character.AncestryChanged:Connect(function(_, parent)
             if parent == nil then
+                updateRunning = false
                 if PlayerHighlights[player] then
                     PlayerHighlights[player]:Destroy()
                     PlayerHighlights[player] = nil
