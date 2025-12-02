@@ -20,9 +20,12 @@ local MainESPConnections = {}
 
 -- Função para obter o time do jogador
 local function GetPlayerTeam(player)
+    if not player then return nil end
+    
     local teamsFolder = workspace:FindFirstChild("___teams_")
     if not teamsFolder then return nil end
     
+    -- Verifica defenders
     local defenders = teamsFolder:FindFirstChild("defenders")
     if defenders then
         local playerInTeam = defenders:FindFirstChild(player.Name)
@@ -31,6 +34,7 @@ local function GetPlayerTeam(player)
         end
     end
     
+    -- Verifica attackers
     local attackers = teamsFolder:FindFirstChild("attackers")
     if attackers then
         local playerInTeam = attackers:FindFirstChild(player.Name)
@@ -43,25 +47,33 @@ local function GetPlayerTeam(player)
 end
 
 -- Função para obter a cor baseada no time (aliado = verde, inimigo = vermelho)
-local function GetTeamColor(playerTeam)
+local function GetTeamColor(playerTeam, player)
     -- Obtém o time do LocalPlayer
     local myTeam = GetPlayerTeam(LocalPlayer)
     
-    -- Se não tem time definido, considera como inimigo
-    if not myTeam then
+    -- Se o jogador é o próprio LocalPlayer, não deve ter ESP
+    if player == LocalPlayer then
+        return Color3.new(1, 1, 1) -- Branco (não usado)
+    end
+    
+    -- Se não tem time definido para mim, considera todos como inimigos
+    if not myTeam or myTeam == nil then
         return Color3.new(1, 0, 0) -- Vermelho (inimigo)
     end
     
     -- Se o jogador não tem time definido, considera como inimigo
-    if not playerTeam then
+    if not playerTeam or playerTeam == nil then
         return Color3.new(1, 0, 0) -- Vermelho (inimigo)
     end
     
-    -- Se é do mesmo time = aliado (verde)
-    if playerTeam == myTeam then
+    -- Garante que ambos são strings e compara
+    local myTeamStr = tostring(myTeam)
+    local playerTeamStr = tostring(playerTeam)
+    
+    -- Compara os times (deve ser exatamente igual)
+    if myTeamStr == playerTeamStr then
         return Color3.new(0, 1, 0) -- Verde (aliado)
     else
-        -- Se é do time adversário = inimigo (vermelho)
         return Color3.new(1, 0, 0) -- Vermelho (inimigo)
     end
 end
@@ -125,7 +137,7 @@ local function CreatePlayerESP(player)
             if not highlight.Parent or not textLabel.Parent then return end
             
             local team = GetPlayerTeam(player)
-            local color = GetTeamColor(team)
+            local color = GetTeamColor(team, player)
             
             highlight.OutlineColor = color
             textLabel.TextColor3 = color
