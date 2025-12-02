@@ -42,14 +42,27 @@ local function GetPlayerTeam(player)
     return nil
 end
 
--- Função para obter a cor baseada no time
-local function GetTeamColor(team)
-    if team == "defenders" then
-        return Color3.new(0, 0, 1) -- Azul
-    elseif team == "attackers" then
-        return Color3.new(1, 0, 0) -- Vermelho
+-- Função para obter a cor baseada no time (aliado = verde, inimigo = vermelho)
+local function GetTeamColor(playerTeam)
+    -- Obtém o time do LocalPlayer
+    local myTeam = GetPlayerTeam(LocalPlayer)
+    
+    -- Se não tem time definido, considera como inimigo
+    if not myTeam then
+        return Color3.new(1, 0, 0) -- Vermelho (inimigo)
+    end
+    
+    -- Se o jogador não tem time definido, considera como inimigo
+    if not playerTeam then
+        return Color3.new(1, 0, 0) -- Vermelho (inimigo)
+    end
+    
+    -- Se é do mesmo time = aliado (verde)
+    if playerTeam == myTeam then
+        return Color3.new(0, 1, 0) -- Verde (aliado)
     else
-        return Color3.new(1, 0, 0) -- Vermelho (time adversário)
+        -- Se é do time adversário = inimigo (vermelho)
+        return Color3.new(1, 0, 0) -- Vermelho (inimigo)
     end
 end
 
@@ -133,8 +146,8 @@ local function CreatePlayerESP(player)
         connection = RunService.Heartbeat:Connect(function()
             if not character or not character.Parent then
                 if connection then connection:Disconnect() end
-                return
-            end
+        return
+    end
             if highlight.Parent and textLabel.Parent then
                 UpdateTeamColor()
             else
@@ -209,10 +222,10 @@ local function CreateDroneESP()
             end
             
             DroneHighlights[drone] = highlight
+            end
         end
     end
-end
-
+    
 -- Função para limpar todo o ESP
 local function CleanupESP()
     for player, highlight in pairs(PlayerHighlights) do
@@ -342,9 +355,9 @@ do
         if value then
             EnableESP()
         else
-            DisableESP()
-        end
-    end)
+        DisableESP()
+    end
+end)
 end
 
 -- Seleciona a primeira tab
