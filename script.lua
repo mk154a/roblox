@@ -346,9 +346,8 @@ local function IsAlly(player)
     if not character then return false end
     
     -- Método 1: Verifica se tem Highlight verde (efeito do jogo nos aliados)
-    -- Este é o método principal - procura por Highlight verde do jogo
+    -- Procura por Highlight verde do jogo (cor RGB 0, 255, 0 ou próximo)
     local ourHighlight = Highlights[player]
-    local foundGreenHighlight = false
     
     for _, highlight in ipairs(character:GetChildren()) do
         if highlight:IsA("Highlight") then
@@ -359,22 +358,79 @@ local function IsAlly(player)
                 -- Este é um Highlight do jogo, verificar se é verde
                 local fillColor = highlight.FillColor
                 local r, g, b = fillColor.R, fillColor.G, fillColor.B
-                -- Verde: G deve ser significativamente maior que R e B
-                -- G > 0.6, R < 0.3, B < 0.3 para garantir que é verde claro
-                if g > 0.6 and r < 0.3 and b < 0.3 and g > r * 2 and g > b * 2 then
-                    foundGreenHighlight = true
-                    break
+                
+                -- Verifica se é verde (RGB 0, 255, 0 ou similar)
+                -- Verde puro: R=0, G=1, B=0
+                -- Aceita variações: G deve ser alto (> 0.7), R e B devem ser baixos (< 0.2)
+                if g > 0.7 and r < 0.2 and b < 0.2 then
+                    return true
+                end
+                
+                -- Também verifica OutlineColor
+                local outlineColor = highlight.OutlineColor
+                if outlineColor then
+                    local or, og, ob = outlineColor.R, outlineColor.G, outlineColor.B
+                    if og > 0.7 and or < 0.2 and ob < 0.2 then
+                        return true
+                    end
                 end
             end
         end
     end
     
-    -- Se encontrou Highlight verde, é aliado
-    if foundGreenHighlight then
-        return true
+    -- Método 2: Verifica em todos os descendentes por objetos com cor verde
+    -- Procura por vários tipos de objetos que podem ter cor verde
+    for _, descendant in ipairs(character:GetDescendants()) do
+        local isGreen = false
+        
+        -- Verifica Highlight
+        if descendant:IsA("Highlight") and descendant ~= ourHighlight then
+            local fillColor = descendant.FillColor
+            local r, g, b = fillColor.R, fillColor.G, fillColor.B
+            if g > 0.7 and r < 0.2 and b < 0.2 then
+                isGreen = true
+            end
+        end
+        
+        -- Verifica ParticleEmitter
+        if descendant:IsA("ParticleEmitter") then
+            local color = descendant.Color
+            if color then
+                local r, g, b = color.R, color.G, color.B
+                if g > 0.7 and r < 0.2 and b < 0.2 then
+                    isGreen = true
+                end
+            end
+        end
+        
+        -- Verifica Beam
+        if descendant:IsA("Beam") then
+            local color = descendant.Color
+            if color then
+                local r, g, b = color.R, color.G, color.B
+                if g > 0.7 and r < 0.2 and b < 0.2 then
+                    isGreen = true
+                end
+            end
+        end
+        
+        -- Verifica PointLight (alguns jogos usam luz verde para aliados)
+        if descendant:IsA("PointLight") then
+            local color = descendant.Color
+            if color then
+                local r, g, b = color.R, color.G, color.B
+                if g > 0.7 and r < 0.2 and b < 0.2 then
+                    isGreen = true
+                end
+            end
+        end
+        
+        if isGreen then
+            return true
+        end
     end
     
-    -- Método 2: Verifica Team do Roblox (só se ambos têm times definidos E diferentes de nil)
+    -- Método 3: Verifica Team do Roblox (só se ambos têm times definidos E diferentes de nil)
     local localTeam = LocalPlayer.Team
     local playerTeam = player.Team
     if localTeam and playerTeam and localTeam ~= nil and playerTeam ~= nil then
@@ -388,7 +444,7 @@ local function IsAlly(player)
         end
     end
     
-    -- Método 3: Verifica TeamColor (só se ambos têm TeamColor definido E diferentes de nil)
+    -- Método 4: Verifica TeamColor (só se ambos têm TeamColor definido E diferentes de nil)
     if LocalPlayer.TeamColor and player.TeamColor and 
        LocalPlayer.TeamColor ~= nil and player.TeamColor ~= nil then
         if LocalPlayer.TeamColor == player.TeamColor then
