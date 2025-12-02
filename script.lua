@@ -345,7 +345,17 @@ local function GetPlayerColor(player)
         if Settings.RainbowTracers and Settings.TracerESP then return Colors.Rainbow end
         if Settings.RainbowText and (Settings.NameESP or Settings.HealthESP) then return Colors.Rainbow end
     end
-    return player.Team == LocalPlayer.Team and Colors.Ally or Colors.Enemy
+    -- Verifica se ambos têm times definidos antes de comparar
+    local localTeam = LocalPlayer.Team
+    local playerTeam = player.Team
+    if localTeam and playerTeam and localTeam ~= nil and playerTeam ~= nil then
+        -- Compara usando o nome do time para garantir que funcione corretamente
+        local isSameTeam = (localTeam == playerTeam) or (localTeam.Name == playerTeam.Name)
+        return isSameTeam and Colors.Ally or Colors.Enemy
+    else
+        -- Se não há times definidos, considera como inimigo (vermelho)
+        return Colors.Enemy
+    end
 end
 
 local function GetBoxCorners(cf, size)
