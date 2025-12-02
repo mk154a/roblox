@@ -341,41 +341,62 @@ end
 
 local function IsAlly(player)
     -- Verifica se é aliado usando múltiplos métodos
+    -- Por padrão, considera como INIMIGO (retorna false)
     local character = player.Character
     if not character then return false end
     
     -- Método 1: Verifica se tem Highlight verde (efeito do jogo nos aliados)
-    local highlight = character:FindFirstChildOfClass("Highlight")
-    if highlight then
-        local fillColor = highlight.FillColor
-        -- Verifica se é uma cor verde (RGB aproximado)
-        local r, g, b = fillColor.R, fillColor.G, fillColor.B
-        -- Verde geralmente tem G > R e G > B
-        if g > 0.5 and g > r and g > b then
-            return true
-        end
-    end
+    -- Este é o método principal - procura por Highlight verde do jogo
+    local ourHighlight = Highlights[player]
+    local foundGreenHighlight = false
     
-    -- Método 2: Verifica Team do Roblox
-    local localTeam = LocalPlayer.Team
-    local playerTeam = player.Team
-    if localTeam and playerTeam then
-        if localTeam == playerTeam then
-            return true
-        elseif localTeam.Name and playerTeam.Name then
-            if localTeam.Name == playerTeam.Name then
-                return true
+    for _, highlight in ipairs(character:GetChildren()) do
+        if highlight:IsA("Highlight") then
+            -- Ignora o Highlight do nosso próprio ESP
+            if ourHighlight and highlight == ourHighlight then
+                -- Este é o nosso Highlight, pular
+            else
+                -- Este é um Highlight do jogo, verificar se é verde
+                local fillColor = highlight.FillColor
+                local r, g, b = fillColor.R, fillColor.G, fillColor.B
+                -- Verde: G deve ser significativamente maior que R e B
+                -- G > 0.6, R < 0.3, B < 0.3 para garantir que é verde claro
+                if g > 0.6 and r < 0.3 and b < 0.3 and g > r * 2 and g > b * 2 then
+                    foundGreenHighlight = true
+                    break
+                end
             end
         end
     end
     
-    -- Método 3: Verifica TeamColor
-    if LocalPlayer.TeamColor and player.TeamColor then
+    -- Se encontrou Highlight verde, é aliado
+    if foundGreenHighlight then
+        return true
+    end
+    
+    -- Método 2: Verifica Team do Roblox (só se ambos têm times definidos E diferentes de nil)
+    local localTeam = LocalPlayer.Team
+    local playerTeam = player.Team
+    if localTeam and playerTeam and localTeam ~= nil and playerTeam ~= nil then
+        -- Compara usando o objeto Team diretamente
+        if localTeam == playerTeam then
+            return true
+        end
+        -- Compara usando o nome do time
+        if localTeam.Name and playerTeam.Name and localTeam.Name == playerTeam.Name then
+            return true
+        end
+    end
+    
+    -- Método 3: Verifica TeamColor (só se ambos têm TeamColor definido E diferentes de nil)
+    if LocalPlayer.TeamColor and player.TeamColor and 
+       LocalPlayer.TeamColor ~= nil and player.TeamColor ~= nil then
         if LocalPlayer.TeamColor == player.TeamColor then
             return true
         end
     end
     
+    -- Por padrão, NÃO é aliado (considera como INIMIGO)
     return false
 end
 
@@ -510,11 +531,11 @@ local function UpdateESP(player)
         return
     end
     
-    -- Verifica se é aliado usando a função IsAlly
-    local isAlly = IsAlly(player)
-    
-    -- Se TeamCheck está ativo e é aliado (e ShowTeam está desativado), não mostrar
+    -- Se TeamCheck está ativo, verifica se é aliado
     if Settings.TeamCheck then
+        local isAlly = IsAlly(player)
+        
+        -- Se é aliado e ShowTeam está desativado, não mostrar ESP
         if isAlly and not Settings.ShowTeam then
             -- É aliado, não mostrar ESP
             for _, obj in pairs(esp.Box) do obj.Visible = false end
@@ -536,7 +557,7 @@ local function UpdateESP(player)
             end
             return
         end
-        -- Se é inimigo ou ShowTeam está ativo, continuar para mostrar o ESP
+        -- Se não é aliado (ou ShowTeam está ativo), continuar para mostrar o ESP como inimigo
     end
     
     local color = GetPlayerColor(player)
@@ -1410,3 +1431,4 @@ SkeletonTransparency:OnChanged(function(Value)
         end
     end
 end)
+
