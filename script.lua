@@ -339,30 +339,54 @@ local function RemoveESP(player)
     end
 end
 
+local function IsAlly(player)
+    -- Verifica se é aliado usando múltiplos métodos
+    local character = player.Character
+    if not character then return false end
+    
+    -- Método 1: Verifica se tem Highlight verde (efeito do jogo nos aliados)
+    local highlight = character:FindFirstChildOfClass("Highlight")
+    if highlight then
+        local fillColor = highlight.FillColor
+        -- Verifica se é uma cor verde (RGB aproximado)
+        local r, g, b = fillColor.R, fillColor.G, fillColor.B
+        -- Verde geralmente tem G > R e G > B
+        if g > 0.5 and g > r and g > b then
+            return true
+        end
+    end
+    
+    -- Método 2: Verifica Team do Roblox
+    local localTeam = LocalPlayer.Team
+    local playerTeam = player.Team
+    if localTeam and playerTeam then
+        if localTeam == playerTeam then
+            return true
+        elseif localTeam.Name and playerTeam.Name then
+            if localTeam.Name == playerTeam.Name then
+                return true
+            end
+        end
+    end
+    
+    -- Método 3: Verifica TeamColor
+    if LocalPlayer.TeamColor and player.TeamColor then
+        if LocalPlayer.TeamColor == player.TeamColor then
+            return true
+        end
+    end
+    
+    return false
+end
+
 local function GetPlayerColor(player)
     if Settings.RainbowEnabled then
         if Settings.RainbowBoxes and Settings.BoxESP then return Colors.Rainbow end
         if Settings.RainbowTracers and Settings.TracerESP then return Colors.Rainbow end
         if Settings.RainbowText and (Settings.NameESP or Settings.HealthESP) then return Colors.Rainbow end
     end
-    -- Verifica se ambos têm times definidos antes de comparar
-    local localTeam = LocalPlayer.Team
-    local playerTeam = player.Team
-    
-    -- Se ambos têm times definidos, compara
-    if localTeam and playerTeam then
-        local isSameTeam = false
-        -- Compara usando o objeto Team diretamente ou o nome como fallback
-        if localTeam == playerTeam then
-            isSameTeam = true
-        elseif localTeam.Name and playerTeam.Name then
-            isSameTeam = (localTeam.Name == playerTeam.Name)
-        end
-        return isSameTeam and Colors.Ally or Colors.Enemy
-    else
-        -- Se não há times definidos, considera como inimigo (vermelho)
-        return Colors.Enemy
-    end
+    -- Usa a função IsAlly para determinar a cor
+    return IsAlly(player) and Colors.Ally or Colors.Enemy
 end
 
 local function GetBoxCorners(cf, size)
@@ -486,24 +510,13 @@ local function UpdateESP(player)
         return
     end
     
-    -- Verifica se é do mesmo time
-    local isSameTeam = false
-    local hasTeams = false
+    -- Verifica se é aliado usando a função IsAlly
+    local isAlly = IsAlly(player)
     
-    if LocalPlayer.Team and player.Team then
-        hasTeams = true
-        -- Compara usando o objeto Team diretamente ou o nome como fallback
-        if LocalPlayer.Team == player.Team then
-            isSameTeam = true
-        elseif LocalPlayer.Team.Name and player.Team.Name then
-            isSameTeam = (LocalPlayer.Team.Name == player.Team.Name)
-        end
-    end
-    
-    -- Se TeamCheck está ativo e é do mesmo time (e ShowTeam está desativado), não mostrar
+    -- Se TeamCheck está ativo e é aliado (e ShowTeam está desativado), não mostrar
     if Settings.TeamCheck then
-        if hasTeams and isSameTeam and not Settings.ShowTeam then
-            -- É do mesmo time, não mostrar
+        if isAlly and not Settings.ShowTeam then
+            -- É aliado, não mostrar ESP
             for _, obj in pairs(esp.Box) do obj.Visible = false end
             esp.Tracer.Visible = false
             for _, obj in pairs(esp.HealthBar) do obj.Visible = false end
@@ -523,8 +536,7 @@ local function UpdateESP(player)
             end
             return
         end
-        -- Se não há times definidos e TeamCheck está ativo, mostrar todos como inimigos
-        -- (não retorna, continua para mostrar o ESP)
+        -- Se é inimigo ou ShowTeam está ativo, continuar para mostrar o ESP
     end
     
     local color = GetPlayerColor(player)
