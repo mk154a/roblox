@@ -488,22 +488,43 @@ local function UpdateESP(player)
     
     -- Verifica se é do mesmo time
     local isSameTeam = false
+    local hasTeams = false
+    
     if LocalPlayer.Team and player.Team then
-        isSameTeam = (LocalPlayer.Team == player.Team) or (LocalPlayer.Team.Name == player.Team.Name)
+        hasTeams = true
+        -- Compara usando o objeto Team diretamente ou o nome como fallback
+        if LocalPlayer.Team == player.Team then
+            isSameTeam = true
+        elseif LocalPlayer.Team.Name and player.Team.Name then
+            isSameTeam = (LocalPlayer.Team.Name == player.Team.Name)
+        end
     end
     
-    if Settings.TeamCheck and isSameTeam and not Settings.ShowTeam then
-        for _, obj in pairs(esp.Box) do obj.Visible = false end
-        esp.Tracer.Visible = false
-        for _, obj in pairs(esp.HealthBar) do obj.Visible = false end
-        for _, obj in pairs(esp.Info) do obj.Visible = false end
-        esp.Snapline.Visible = false
-        -- Desabilita o highlight também
-        local highlight = Highlights[player]
-        if highlight then
-            highlight.Enabled = false
+    -- Se TeamCheck está ativo e é do mesmo time (e ShowTeam está desativado), não mostrar
+    if Settings.TeamCheck then
+        if hasTeams and isSameTeam and not Settings.ShowTeam then
+            -- É do mesmo time, não mostrar
+            for _, obj in pairs(esp.Box) do obj.Visible = false end
+            esp.Tracer.Visible = false
+            for _, obj in pairs(esp.HealthBar) do obj.Visible = false end
+            for _, obj in pairs(esp.Info) do obj.Visible = false end
+            esp.Snapline.Visible = false
+            -- Desabilita o highlight também
+            local highlight = Highlights[player]
+            if highlight then
+                highlight.Enabled = false
+            end
+            -- Desabilita skeleton também
+            local skeleton = Drawings.Skeleton[player]
+            if skeleton then
+                for _, line in pairs(skeleton) do
+                    line.Visible = false
+                end
+            end
+            return
         end
-        return
+        -- Se não há times definidos e TeamCheck está ativo, mostrar todos como inimigos
+        -- (não retorna, continua para mostrar o ESP)
     end
     
     local color = GetPlayerColor(player)
